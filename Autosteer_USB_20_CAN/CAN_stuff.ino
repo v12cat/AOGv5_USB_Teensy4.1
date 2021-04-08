@@ -31,7 +31,7 @@ ISO_Bus.begin();
   ISO_Bus.onReceive(ISO_Bus_stuff);
   ISO_Bus.mailboxStatus();
   ISO_Bus.setFIFOFilter(REJECT_ALL);
-  ISO_Bus.setFIFOFilter(0,0x0CEF2CF0, EXT);
+  ISO_Bus.setFIFOFilter(0,0x18EF2CF0, EXT);
   CAN_message_t msgI;
   msgI.id = 0x18EEFF2C;
   msgI.flags.extended = true;
@@ -63,13 +63,8 @@ void V_Bus_stuff(const CAN_message_t &msg) {
 
 void ISO_Bus_stuff(const CAN_message_t &msg) {
 
-   if ((msg.buf[0])== 0x0F || (msg.buf[1])== 0x60){
+     if ((msg.buf[0])== 0x0F && (msg.buf[1])== 0x60 && (msg.buf[2])== 0x01) steerSwitch = 0;                         //steer enable via ISO bus
 
-//if ((msg.buf[2])== 0x01) 
-steerSwitch = 0;                         //steer enable via ISO bus
-      
-   
-}
 }
 
 void K_Bus_stuff(const CAN_message_t &msg) {
