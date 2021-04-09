@@ -71,7 +71,8 @@ byte goPress[8]        = {0x15, 0x22, 0x06, 0xCA, 0x80, 0x01, 0x00, 0x00} ;    /
 byte goLift[8]         = {0x15, 0x22, 0x06, 0xCA, 0x00, 0x02, 0x00, 0x00} ;    //  lift little go
 byte endPress[8]       = {0x15, 0x23, 0x06, 0xCA, 0x80, 0x03, 0x00, 0x00} ;    //  press little end
 byte endLift[8]        = {0x15, 0x23, 0x06, 0xCA, 0x00, 0x04, 0x00, 0x00} ;    //  lift little end
-int16_t canSteerPosition = 0;  //can steer variable
+int16_t canSteerPosition = 0, setCurve = 0;  //can steer variable
+float steerValue = 0;
 bool goDown = false, endDown = false , bitState = false, bitStateOld = false;
 
 //-----------------------------CAN---------------------------------------
@@ -171,7 +172,7 @@ struct Setup {
   byte MotorDriveDirection = 0;
   byte SingleInputWAS = 1;
   byte CytronDriver = 0;
-  byte SteerSwitch = 1;  //0 button, 1 on-off switch
+  byte SteerSwitch = 0;  //0 button, 1 on-off switch
   byte ShaftEncoder = 0;
   byte PulseCountMax = 5;
   byte isDanfoss = 0;
@@ -277,7 +278,7 @@ void setup()
   }
 
   //50Khz I2C
-  TWBR = 144;
+  //TWBR = 144;
 
   EEPROM.get(0, EEread);              // read identifier
 
@@ -688,8 +689,8 @@ void EncoderFunc()
 
 void SetRelays(void)
 {
-  if (goDown)   liftGo();
-  if (endDown)   liftEnd();
+  if (goDown)   liftGo();       // release 'go' one timed loop cycle after press
+  if (endDown)   liftEnd();     // release 'end' one timed loop cycle after press
 
   bitState = (bitRead(relayLo, 0));
   if (bitState  && !bitStateOld) pressGo();
