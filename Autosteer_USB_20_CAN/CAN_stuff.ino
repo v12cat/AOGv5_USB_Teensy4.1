@@ -1,4 +1,3 @@
-
 void CAN_setup (void) {
 
   byte navController[8] = {0x00, 0x00, 0xA0, 0x27, 0x00, 0x17, 0x02, 0x20} ;  //Fendt Set, 2C Navagation Controller
@@ -16,6 +15,7 @@ V_Bus.begin();
   V_Bus.mailboxStatus();
   V_Bus.setFIFOFilter(REJECT_ALL);
   V_Bus.setFIFOFilter(0, 0x0CEF2CF0, EXT);
+  
   CAN_message_t msgV;
   msgV.id = 0x18EEFF2C;
   msgV.flags.extended = true;
@@ -57,14 +57,14 @@ void V_Bus_stuff(const CAN_message_t &msg) {
 
      if (msg.len == 3 && (msg.buf[2] == 0)) steerSwitch = 1;      // steer disable via V bus
 
-     if (msg.len == 8 && msg.buf[0] == 5 && msg.buf[1] == 10 && steerSwitch == 1) 
-          canSteerPosition = ((msg.buf[4] << 8) + msg.buf[5]);    // steer point follows WAS if not CAN steering
+     if (msg.len == 8 && msg.buf[0] == 5 && msg.buf[1] == 10) 
+          canSteerPosition = ((msg.buf[4] << 8) + msg.buf[5]);    // WAS reading
 }
 
 void ISO_Bus_stuff(const CAN_message_t &msg) {
 
-     if ((msg.buf[0])== 0x0F && (msg.buf[1])== 0x60 && (msg.buf[2])== 0x01) steerSwitch = 0;                         //steer enable via ISO bus
-
+   if ((msg.buf[0])== 0x0F && (msg.buf[1])== 0x60 && (msg.buf[2])== 0x01) steerSwitch = 0;                         //steer enable via ISO bus
+ 
 }
 
 void K_Bus_stuff(const CAN_message_t &msg) {
@@ -77,6 +77,18 @@ void K_Bus_stuff(const CAN_message_t &msg) {
 //+++++++++++++++++++++++++++++++++++++ Send steer angle to CAN ++++++++++++++++++++++++++++++++++++++++
 
 void sendSteer(void){
+
+ // ----------------------- Alter steer value according to PWM-------------------------
+
+    float shift = (sq(pwmDrive)/32);            //  trying the square divided down method again!!
+    if (pwmDrive< 0) shift *= -1;               // reinstate negative cancelled by square
+     steerValue += shift;                       // using a float steer value to prevent rollover etc.
+     if (steerValue > 32767) steerValue = 32767;
+    if (steerValue < -32768) steerValue = -32768;
+    setCurve = (int16_t) steerValue;
+    
+  //----------------------------------------------------------------------------------
+  
     CAN_message_t curveData;
     curveData.id = 0x0CEFF02C;
     curveData.flags.extended = true;
@@ -85,14 +97,15 @@ void sendSteer(void){
     curveData.buf[1] = 9;
     curveData.buf[2] = (!steerSwitch + 2);
     curveData.buf[3] = 10;
-    if (steerSwitch == 0){
-      curveData.buf[4] = highByte(canSteerPosition);
-      curveData.buf[5] = lowByte(canSteerPosition);
+    if (steerSwitch == 0){                         //     send steer value to CAN when steer enabled
+      curveData.buf[4] = highByte(setCurve);
+      curveData.buf[5] = lowByte(setCurve);
     }
     else{
       curveData.buf[4] = 0;
       curveData.buf[5] = 0;
-    }
+      steerValue = (float) canSteerPosition;       //    Keep steer value similar to steer position if not steering
+    }                                              //     to prevent jumps when re-engaging   
 V_Bus.write(curveData);
 pwmDisplay = pwmDrive;
 
@@ -108,11 +121,11 @@ pwmDisplay = pwmDrive;
 }
 
 
-//++++++++++++++++++++++++++  K_Bus Buttons ++++++++++++++++++++++++++++++++++++++++++++++
+//++++++++++++++++++++++++++  K_Bus Buttons ++++++++++++++++++++++++++++++++++++++++
 
 
 void pressGo()
-{                                     //delays in case they help. Maybe unnecessary?
+{                                    
  CAN_message_t buttonData;
  buttonData.id = 0X613;
  buttonData.len = 8;
