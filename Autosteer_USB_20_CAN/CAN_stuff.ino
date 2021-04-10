@@ -71,7 +71,7 @@ void K_Bus_stuff(const CAN_message_t &msg) {
 
   if (msg.buf[0]==0x15 and msg.buf[2]==0x06 and msg.buf[3]==0xCA){
 
-    if(msg.buf[1]==0x8A and msg.buf[4]==0x80) steerSwitch = 1;
+    if(msg.buf[1]==0x8A and msg.buf[4]==0x80) steerSwitch = 1;        // turn AOG steer off if tractor steer is cancelled completely
   }
                                                             
   }
