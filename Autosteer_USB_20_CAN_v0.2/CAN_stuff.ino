@@ -55,7 +55,7 @@ ISO_Bus.begin();
 
 void V_Bus_stuff(const CAN_message_t &msg) {
 
-     if (msg.len == 3 && (msg.buf[2] == 0)) steerSwitch = 1;      // steer disable via V bus
+     if (msg.len == 3 && (msg.buf[2] == 0)) readSteer = 1;      // steer disable via V bus
 
      if (msg.len == 8 && msg.buf[0] == 5 && msg.buf[1] == 10) 
           canSteerPosition = ((msg.buf[4] << 8) + msg.buf[5]);    // WAS reading
@@ -63,7 +63,7 @@ void V_Bus_stuff(const CAN_message_t &msg) {
 
 void ISO_Bus_stuff(const CAN_message_t &msg) {
 
-   if ((msg.buf[0])== 0x0F && (msg.buf[1])== 0x60 && (msg.buf[2])== 0x01) steerSwitch = 0;                         //steer enable via ISO bus
+   if ((msg.buf[0])== 0x0F && (msg.buf[1])== 0x60 && (msg.buf[2])== 0x01) readSteer = 0;                         //steer enable via ISO bus
  
 }
 
@@ -71,8 +71,9 @@ void K_Bus_stuff(const CAN_message_t &msg) {
 
   if (msg.buf[0]==0x15 and msg.buf[2]==0x06 and msg.buf[3]==0xCA){
 
-    if(msg.buf[1]==0x8A and msg.buf[4]==0x80) steerSwitch = 1;      // turn AOG steer off if tractor steer is cancelled completely
-  }
+    if(msg.buf[1]==0x8A and msg.buf[4]==0x80) readSteer = 1;      // turn AOG steer off if tractor steer is cancelled completely
+    if(msg.buf[1]==0x22 and msg.buf[4]==0x80) workSwitch = 0; 
+    if(msg.buf[1]==0x23 and msg.buf[4]==0x80) workSwitch = 1; }
                                                                  
   }
 
@@ -80,10 +81,12 @@ void K_Bus_stuff(const CAN_message_t &msg) {
 //+++++++++++++++++++++++++++++++++++++ Send steer angle to CAN ++++++++++++++++++++++++++++++++++++++++
 
 void sendSteer(void){
-
- 
-   
-    steerValue = (steerAngleSetPoint*800);
+/*
+ steerValue = steerValue + (pwmDrive*5);
+    if (steerValue > 32767) steerValue = 32767;
+    if (steerValue < -32768) steerValue = -32768;
+   */
+    steerValue = (steerAngleSetPoint*800)+steerSettings.wasOffset;
     setCurve = (int16_t) steerValue;
     
    
